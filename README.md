@@ -1,8 +1,8 @@
-# Triticale Restitution GWAS: Full Pipeline and Workflow Documentation
+# Triticale Restitution GWAS: Complete Pipeline & Workflow Documentation
 
 ## Overview
 
-This repository contains the complete workflow for Genome-Wide Association Study (GWAS) on restitution traits in triticale. It covers data preparation, GWAS analysis, postprocessing significant marker results, annotation with sequences, and BLAST for marker mapping to reference genomes. The process utilizes **Python** for data manipulation & BLAST, and **R** for GWAS and linkage disequilibrium calculations.
+This repository provides a comprehensive workflow for conducting Genome-Wide Association Studies (GWAS) on restitution traits in triticale. It covers all steps from initial data preparation, GWAS analysis, postprocessing of significant marker results, functional annotation, and BLAST mapping of markers to reference genomes. The workflow leverages **Python** for data manipulation, sequence annotation, and BLAST, and **R** for GWAS and linkage disequilibrium analysis.
 
 ---
 
@@ -10,30 +10,35 @@ This repository contains the complete workflow for Genome-Wide Association Study
 
 **Script:** `preparing_for_second_GAPIT.py`
 
-**Workflow:**
+**Steps:**
 - Reads marker data (`Tabela_S1.xlsx`) and phenotype data (`20250304_pheno_2n_gametes_ABDR.csv`).
-- Cleans, harmonizes genotype and phenotype sample IDs, filters by missingness, and drops monomorphic SNPs.
-- Encodes genotypes (`a` → `0`, `b` → `2`) and prepares metadata.
-- Outputs:
-  - `GAPIT_genotype.csv` (GD matrix, Taxa x SNPs)
-  - `GAPIT_phenotype.csv` (phenotype matrix)
-  - `GAPIT_snp_metadata.csv` (SNP info, CHR/Kosambi cM, etc.)
+- Harmonizes sample IDs, cleans and filters for missingness, and removes monomorphic SNPs:
+  - Excludes markers with >20% missing genotypes.
+  - Excludes samples with >20% missing data.
+  - Removes monomorphic markers.
+- Encodes genotypes: `a` → `0`, `b` → `2`, and imputes missing values.
+- Prepares metadata for GWAS.
+
+**Outputs:**
+- `GAPIT_genotype.csv` (Taxa x SNPs)
+- `GAPIT_phenotype.csv`
+- `GAPIT_snp_metadata.csv` (SNP info: chromosome, Kosambi cM, etc.)
 
 ---
 
-## 2. Running GWAS in R with GAPIT
+## 2. GWAS Analysis in R with GAPIT
 
 **Script:** `GWAS_kosmbi_full_pipeline_all_models.R`
 
-**Workflow:**
-- Loads cleaned genotype, phenotype, and SNP metadata tables.
-- Orders chromosomes for triticale (`1A–7A, 1B–7B, 1R–7R`).
-- Intersects and matches marker IDs in all files; imputes missing genotypes.
-- Loops through set of **traits** (`rest_1`–`rest_5`) and **models** (`GLM`, `MLM`, `CMLM`, ...).
-- Outputs for each trait/model:
-  - Manhattan plots: `Manhattan.pdf`
-  - Significant SNPs (`p < 0.01`, `< 0.005`): `Significant_SNPs_p001.csv`, `Significant_SNPs_p0005.csv`
-- Saves all results under `GAPIT_results/`.
+**Steps:**
+- Loads cleaned genotype, phenotype, and SNP metadata.
+- Orders chromosomes: `1A–7A, 1B–7B, 1R–7R`.
+- Intersects and synchronizes marker IDs across all files; imputes missing genotypes if needed.
+- Iterates over all **traits** (`rest_1`–`rest_5`) and **models** (`GLM`, `MLM`, `CMLM`, etc).
+- For each trait/model:
+  - Generates Manhattan plots (`Manhattan.pdf`).
+  - Outputs lists of significant SNPs (`Significant_SNPs_p001.csv`, `Significant_SNPs_p0005.csv`).
+- All results are saved under `GAPIT_results/`.
 
 ---
 
@@ -41,135 +46,211 @@ This repository contains the complete workflow for Genome-Wide Association Study
 
 **Script:** `merge_significant_snps.py`
 
-**Workflow:**
-- Merges significant SNPs across traits/models into comprehensive summary sheets.
+**Steps:**
+- Merges significant SNPs across all traits and models into consolidated summary tables.
 
 ---
 
-## 4. Annotating Markers: Adding Allele Sequence Information
+## 4. Annotating Markers with Allele Sequences
 
 **Script:** `add_allele_seq.py`
 
-**Workflow:**
-- Adds allele sequences to `location.xlsx` for downstream BLAST.
+**Steps:**
+- Adds allele sequences to `location.xlsx` for downstream BLAST analysis.
 
 ---
 
-## 5. BLAST Marker Sequences to Reference Genomes
+## 5. Mapping Marker Sequences via BLAST
 
 **Reference Genomes:**
 - **Wheat:** `/ref_wheat/ncbi_dataset/data/GCF_018294505.1/GCF_018294505.1_IWGSC_CS_RefSeq_v2.1_genomic.fna`
 - **Rye:** `/ref_rye/ncbi_dataset/data/GCA_965641915.1/GCA_965641915.1_lpSecCere.Lo7.IPK.v3_genomic.fna`
 
-**BLAST Commands:**
-- Create BLAST DB for Wheat:
-  ```sh
-  makeblastdb \
-    -in GCF_018294505.1_IWGSC_CS_RefSeq_v2.1_genomic.fna \
-    -dbtype nucl \
-    -parse_seqids \
-    -out wheat_db
-  ```
-- Create BLAST DB for Rye:
-  ```sh
-  makeblastdb \
-    -in GCA_965641915.1_lpSecCere.Lo7.IPK.v3_genomic.fna \
-    -dbtype nucl \
-    -parse_seqids \
-    -out rye_db
-  ```
-- Run BLAST:
-  ```
-  python3 blast_allele_seq.py
-  ```
-- For relaxed criteria (e.g., mismapped hits):
-  ```
-  python3 unmapped.py
-  ```
+### 5.1 Creating BLAST Databases
 
----
-
-## 6. Prepare Data for PLINK & LD Calculation
-
-**Script:** `v2_LD.R`
-
-**Workflow:**
-- Reads marker table (`Tabela_S1.csv`), detects individual columns, and retains only mapped markers (with Kosambi cM).
-- Recodes A/B/- genotype coding to numeric 0/1/NA. Converts genotype matrix to SnpMatrix (from `snpStats`).
-- Calculates LD (R²) matrix for all markers, saves to `triticale_3083markers_r2_matrix.rds`.
-
----
-
-## Folder Structure
-
-```
-├── preparing_for_second_GAPIT.py             # Data preparation for GAPIT
-├── GAPIT_genotype.csv                        # Output: Genotype matrix
-├── GAPIT_phenotype.csv                       # Output: Phenotype matrix
-├── GAPIT_snp_metadata.csv                    # Output: SNP metadata
-├── GWAS_kosmbi_full_pipeline_all_models.R    # GAPIT GWAS full pipeline
-├── GAPIT_results/                            # All GWAS result subdirectories
-│    └── [trait]/[model]/...                  # e.g., rest_5/FarmCPU/Manhattan.pdf
-├── merge_significant_snps.py                 # Merges significant SNP results
-├── add_allele_seq.py                         # Adds sequences for BLAST/annotation
-├── blast_allele_seq.py                       # BLASTs against reference genomes
-├── unmapped.py                               # BLAST with relaxed criteria
-├── v2_LD.R                                   # Prepares genotype for PLINK/LD
-├── ref_wheat/                                # Wheat reference genome files
-├── ref_rye/                                  # Rye reference genome files
-└── triticale_3083markers_r2_matrix.rds       # Saved LD matrix
+**Commands:**
+```sh
+makeblastdb -in GCF_018294505.1_IWGSC_CS_RefSeq_v2.1_genomic.fna \
+  -dbtype nucl \
+  -parse_seqids \
+  -out wheat_db
+makeblastdb -in GCA_902687465.1_Rye_Lo7_2018_v1p1p1_genomic.fna \
+  -dbtype nucl \
+  -parse_seqids \
+  -out rye_db
 ```
 
----
+### 5.2 BLAST: Relaxed and Strict Filtering
 
-## Dependencies
+**Script:** `blast_allele_seq.py`  
+- **Relaxed search:**  
+  - Tool: `blastn-short`
+  - E-value: 1e-3
+  - Word size: 7
+  - No complexity filter
+- **Strict filtering:**  
+  - ≥95% identity
+  - Alignment length ≥60 bp
+  - ≤2 mismatches, no gaps
+  - E-value ≤1e-10
 
-- **Python 3**: `pandas`, `numpy`
-- **R**: `GAPIT`, `ggplot2`, `data.table`, `snpStats`
-- **BLAST+**: `makeblastdb`, `blastn`
+**Output:**  
+`relaxed_results.xlsx` – best hit per CloneID/marker per genome
 
----
+### 5.3 Standardizing Chromosome Names
 
-## Running the Pipeline
+**Script:** `rename_chr_NCBI.py`
 
-1. **Data preparation:**
-   ```
-   python3 preparing_for_second_GAPIT.py
-   ```
-2. **GWAS run:**
-   ```
-   Rscript GWAS_kosmbi_full_pipeline_all_models.R
-   ```
-3. **Merge results:**
-   ```
-   python3 merge_significant_snps.py
-   ```
-4. **Add sequence annotation:**
-   ```
-   python3 add_allele_seq.py
-   ```
-5. **BLAST mapping:**
-   ```
-   python3 blast_allele_seq.py
-   python3 unmapped.py      # for relaxed
-   ```
-6. **LD calculation / PLINK prep:**
-   ```
-   Rscript v2_LD.R
-   ```
+**Purpose:**  
+- Extracts GenBank accessions from BLAST hits and maps them to chromosome names (e.g., `NC_057794.1` → `2B`).
+
+**Output:**  
+`relaxed_results_with_chr_names.xlsx`
 
 ---
 
-## Notes
+## 6. Integrating BLAST Hits with Significant SNPs
 
-- **Chromosome ordering:** Ensures triticale chromosomes match `1A–7A, 1B–7B, 1R–7R`.
-- **Genotype encoding:** Always verify `a/b` or `A/B` coding before numeric conversion.
-- **Missing data:** Filtering by sample/SNP missingness is crucial for valid GWAS results.
-- **BLAST usage:** Marker position validation on reference sequence; use stringent/relaxed criteria as needed.
-- **LD analysis:** Essential for exploring marker correlations and GWAS peak validation.
+**Script:** `Significant_SNPs_with_relaxed_hits.py`
+
+**Purpose:**
+- Loads `All_Significant_SNPs_p001_merged_python.csv` and `relaxed_results.xlsx`.
+- Matches GWAS SNPs to BLAST markers (CloneID).
+- Adds genomic coordinates.
+
+**Output:**  
+`Significant_SNPs_with_relaxed_hits.xlsx`  
+(Main table connecting restitution GWAS hits to wheat/rye genomic positions.)
 
 ---
 
-## Contact
+## 7. Linkage Disequilibrium (LD) Analysis
 
-For questions or troubleshooting, please raise an issue or contact the repository maintainer.
+**Scripts:**  
+- `v2_LD.R` (genome-wide LD)
+- `LD_visualization.R` (LD heatmaps per chromosome)
+- `LD_region_haploview_fixed.R` (local LD around markers)
+- `LD_blocks_threshold0.8.R` (extract LD blocks)
+
+### 7.1 Genome-wide LD
+```sh
+nohup Rscript v2_LD.R &
+```
+### 7.2 Chromosome LD Heatmaps
+```sh
+Rscript LD_visualization.R
+```
+### 7.3 LD Around a Marker
+```r
+source("LD_region_haploview_fixed.R")
+plot_ld_region("100008483", window = 30)
+```
+### 7.4 LD Blocks Extraction
+```sh
+Rscript LD_blocks_threshold0.8.R
+```
+
+**Outputs:**  
+- LD matrices  
+- LD blocks per chromosome  
+- Regional LD structures supporting candidate gene prioritization
+
+---
+
+## 8. Functional Annotation Integration
+
+### 8.1 Wheat Annotation
+
+**Files:**  
+- High-confidence gene models: `iwgsc_refseqv2.1_annotation_200916_HC.gff3`
+- Functional annotation: `iwgsc_refseqv2.1_functional_annotation.csv`
+
+**Script:**  
+`enrich_gff_with_functional_annotation.py`
+
+**Purpose:**  
+- Adds GO, Pfam, InterPro, and functional descriptions to the GFF3 file.
+
+### 8.2 Rye Annotation
+
+**Files:**
+- Raw annotation: `Secale_cereale.Rye_Lo7_2018_v1p1p1.62.gff3`
+- High-confidence + GO: `Secale_cereale_Lo7_2018v1p1p1.pgsb.Feb2019.HC.gff3`
+
+---
+
+## 9. Extracting Candidate Genes Near Significant Loci
+
+**Script:**  
+`get_gwas_region_genes.py --chr Chr2B --pos 84439437 --window 500000`
+
+**Output:**  
+List of genes within ±500 kb around the SNP, with functional annotations for wheat and rye.
+
+---
+
+## 10. GO Enrichment Analysis for Candidate Regions
+
+**Script:**  
+`gwas_chr2B_GO_enrichment.R`
+
+**Outputs:**
+- List of genes in the region (with annotation)
+- GO enrichment table: `GO_enrichment_Chr2B_84439437_w1000000.tsv`
+- Candidate gene descriptions: `candidate_genes_Chr2B_84439437_w1000000.tsv`
+
+---
+
+## 11. Integrating Functional Annotation with Significant SNP Table
+
+**Script:**  
+`add_genes_with_GO_to_SNP_table.R`
+
+**Purpose:**  
+Adds nearby genes and functional details directly into the GWAS SNP table.  
+Final output used for restitution loci interpretation.
+
+---
+
+## 12. Summary Workflow
+
+Here’s a streamlined flow summarizing the full pipeline:
+
+### Workflow Diagram
+
+```
+Raw marker + phenotype data
+      │
+preprocessing (preparing_for_GAPIT.py)
+      │
+GWAS (all GAPIT models)
+      ├─ per-trait/model results
+      └─ merged significant SNPs
+      │
+Add allele sequences (add_allele_seq.py)
+      │
+BLAST mapping (wheat + rye, blast_allele_seq.py)
+      └─ strict filtering & normalization
+      │
+Chromosome naming (rename_chr_NCBI.py)
+      │
+Merge BLAST hits with significant SNPs
+      │
+LD analysis (genome-wide & local, R scripts)
+      │
+Functional annotation enrichment (Python)
+      │
+Candidate gene extraction near hits
+      │
+GO enrichment analysis (R)
+      │
+Integrated output: SNP + BLAST + LD + functional genes
+      │
+Ready for interpretation & manuscript prep
+```
+
+---
+
+
+**Contact:**  
+For questions, contact shima.mahmoudi@msn.com
